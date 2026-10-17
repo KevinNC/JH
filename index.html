@@ -1,0 +1,909 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <!-- ✏️ EDITAR: Título de la pestaña del navegador -->
+  <title>CAMPA JH · Enero 2027</title>
+
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <!-- SheetJS: para exportar a Excel (.xlsx) -->
+  <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
+
+  <!-- Google Fonts: Barlow Condensed (títulos) + Barlow (cuerpo) -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700;800;900&family=Barlow:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            condensed: ['Barlow Condensed', 'sans-serif'],
+            sans:      ['Barlow', 'sans-serif'],
+          },
+        },
+      },
+    };
+  </script>
+
+  <style>
+    /* ── Variables de color ─────────────────────────────── */
+    /* ✏️ EDITAR: Paleta principal */
+    :root {
+      --orange:      #F75A00;
+      --orange-dark: #7D2200;
+      --red:         #BB1515;
+      --red-dark:    #8A0D0D;
+    }
+
+    html  { scroll-behavior: smooth; }
+    body  { font-family: 'Barlow', sans-serif; overflow-x: hidden; }
+
+    /* ── Texturas ────────────────────────────────────────── */
+    .bg-texture {
+      background-color: #ffffff;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='4' height='4'%3E%3Crect width='1' height='1' x='0' y='0' fill='%23c8c8c8' fill-opacity='0.18'/%3E%3Crect width='1' height='1' x='2' y='2' fill='%23c8c8c8' fill-opacity='0.18'/%3E%3C/svg%3E");
+    }
+    .card-texture {
+      background-color: #fafafa;
+      background-image: url("data:image/svg+xml,%3Csvg width='6' height='6' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='%23d0d0d0' fill-opacity='0.18'%3E%3Cpath d='M5 0h1L0 6V5zM6 5v1H5z'/%3E%3C/g%3E%3C/svg%3E");
+    }
+
+    /* ── Animaciones ─────────────────────────────────────── */
+    .fade-up { opacity: 0; animation: fadeUp 0.4s ease forwards; }
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(10px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    .bump { animation: bump 0.3s ease; }
+    @keyframes bump {
+      0%   { transform: scale(1); }
+      50%  { transform: scale(1.18); }
+      100% { transform: scale(1); }
+    }
+
+    /* ── Formas geométricas hero ─────────────────────────── */
+    .geo { position: absolute; background-color: var(--red); }
+
+    /* ── Hover tarjetas propósito ────────────────────────── */
+    .card-hover { transition: transform 0.28s ease, box-shadow 0.28s ease; }
+    .card-hover:hover {
+      transform: translateY(-6px);
+      box-shadow: 0 20px 40px rgba(187,21,21,0.12);
+    }
+
+    /* ── Botones ─────────────────────────────────────────── */
+    .btn-orange {
+      background-color: var(--orange);
+      transition: filter 0.2s ease, transform 0.2s ease;
+    }
+    .btn-orange:hover  { filter: brightness(1.12); }
+    .btn-orange:active { transform: scale(0.96); }
+
+    .btn-red {
+      background-color: var(--red);
+      transition: filter 0.2s ease, transform 0.2s ease;
+    }
+    .btn-red:hover  { filter: brightness(1.12); }
+    .btn-red:active { transform: scale(0.96); }
+
+    /* ── Export buttons ──────────────────────────────────── */
+    .btn-export {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-family: 'Barlow Condensed', sans-serif;
+      font-weight: 700;
+      font-size: 0.85rem;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      padding: 10px 18px;
+      border-radius: 10px;
+      border: 2px solid rgba(255,255,255,0.3);
+      color: #fff;
+      background: rgba(255,255,255,0.12);
+      transition: background 0.2s ease, border-color 0.2s ease, transform 0.15s ease;
+      cursor: pointer;
+      white-space: nowrap;
+    }
+    .btn-export:hover  { background: rgba(255,255,255,0.22); border-color: rgba(255,255,255,0.55); }
+    .btn-export:active { transform: scale(0.96); }
+    .btn-export.sheets { background: rgba(66,133,244,0.25); border-color: rgba(66,133,244,0.5); }
+    .btn-export.sheets:hover { background: rgba(66,133,244,0.4); border-color: rgba(66,133,244,0.8); }
+
+    /* Feedback toast */
+    #toast {
+      position: fixed;
+      bottom: 2rem;
+      left: 50%;
+      transform: translateX(-50%) translateY(20px);
+      background: #1a1a1a;
+      color: #fff;
+      font-family: 'Barlow Condensed', sans-serif;
+      font-weight: 700;
+      font-size: 0.95rem;
+      letter-spacing: 0.05em;
+      padding: 12px 24px;
+      border-radius: 50px;
+      box-shadow: 0 8px 30px rgba(0,0,0,0.35);
+      opacity: 0;
+      transition: opacity 0.3s ease, transform 0.3s ease;
+      z-index: 9999;
+      pointer-events: none;
+    }
+    #toast.show {
+      opacity: 1;
+      transform: translateX(-50%) translateY(0);
+    }
+
+    /* ── Scrollbars ──────────────────────────────────────── */
+    ::-webkit-scrollbar { width: 5px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.25); border-radius: 3px; }
+    #lista-inscritos { scrollbar-width: thin; scrollbar-color: rgba(255,255,255,0.2) transparent; }
+
+    #lista-inscritos .items-center {
+      background-color: rgb(3 0 0 / 50%);
+    }
+    #lista-inscritos .items-center span {
+      font-size: 1.8rem;
+    }
+
+  </style>
+</head>
+
+<body class="bg-white antialiased">
+
+  <!-- ═══════════════════════════════════════════════
+       HEADER
+  ═══════════════════════════════════════════════ -->
+  <header style="background-color: var(--orange-dark);" class="sticky top-0 z-50 py-3 px-6 shadow-lg">
+    <div class="max-w-6xl mx-auto flex items-center justify-center gap-3">
+      <svg xmlns="http://www.w3.org/2000/svg" class="w-7 h-7 text-white shrink-0" viewBox="0 0 24 24" fill="currentColor">
+        <path d="M10 2h4v7h7v4h-7v9h-4v-9H3v-4h7z"/>
+      </svg>
+      <!-- ✏️ EDITAR: Nombre en el header -->
+      <span class="font-condensed font-black text-white text-3xl tracking-[0.3em] uppercase select-none">CAMPA</span>
+    </div>
+  </header>
+
+
+  <!-- ═══════════════════════════════════════════════
+       HERO
+  ═══════════════════════════════════════════════ -->
+  <section id="inicio" class="relative min-h-screen flex items-center overflow-hidden">
+
+    <!-- ✏️ EDITAR: URL de la imagen de fondo -->
+    <div class="absolute inset-0">
+      <img
+        src="https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=1920&q=80"
+        alt="Playa al atardecer"
+        class="w-full h-full object-cover object-center"
+        loading="eager"
+      />
+      <div class="absolute inset-0" style="background: linear-gradient(115deg, rgba(0,0,0,0.80) 0%, rgba(0,0,0,0.55) 45%, rgba(0,0,0,0.25) 100%);"></div>
+      <div class="absolute inset-0" style="background: linear-gradient(to top, rgba(180,60,0,0.35) 0%, transparent 55%);"></div>
+    </div>
+
+    <div class="relative z-10 w-full max-w-6xl mx-auto px-6 py-24 lg:py-32">
+      <div class="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-14">
+
+        <!-- LEFT: Texto -->
+        <div class="max-w-2xl">
+          <!-- ✏️ EDITAR: Título hero -->
+          <h1 class="font-condensed font-black text-white uppercase leading-none tracking-wide text-5xl sm:text-6xl lg:text-[5.5rem]">
+            ENERO 2027:<br/>
+            UN TIEMPO<br/>
+            <span style="color: #FFAA66;">DE PAUSA</span>
+          </h1>
+          <!-- ✏️ EDITAR: Versículo hero -->
+          <p class="mt-6 text-white/90 text-lg sm:text-xl font-light leading-snug">
+            "Estad quietos, y conoced que yo soy Dios."
+          </p>
+          <p class="mt-1.5 font-condensed font-bold text-white/60 text-sm tracking-[0.25em] uppercase">Salmo 46:10</p>
+          <!-- ✏️ EDITAR: Texto del botón CTA -->
+          <a href="#info-precios"
+             class="btn-red mt-9 inline-flex items-center gap-2.5 text-white font-condensed font-black text-xl uppercase tracking-widest px-9 py-4 rounded-full shadow-2xl">
+            RESERVA TU LUGAR
+            <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" d="m8.25 4.5 7.5 7.5-7.5 7.5"/>
+            </svg>
+          </a>
+        </div>
+
+        <!-- RIGHT: Gráfico CAMPA/JH -->
+        <div class="relative flex-shrink-0 self-center hidden sm:block">
+          <div style="background-color: var(--red);" class="px-10 py-7 shadow-2xl relative z-10">
+            <span class="font-condensed font-black text-white text-[4.5rem] leading-none tracking-[0.12em] uppercase">CAMPA</span>
+          </div>
+          <div class="absolute -bottom-20 -right-6 bg-white px-8 py-4 shadow-2xl z-20 border-t-4" style="border-color: var(--red);">
+            <span class="font-condensed font-black text-[3.8rem] leading-none" style="color: var(--red);">JH</span>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- Formas geométricas: esquina inferior derecha -->
+    <div class="absolute bottom-0 right-0 w-56 h-36 pointer-events-none overflow-hidden">
+      <div class="geo absolute bottom-16 right-[-10px] w-44 h-[11px] rotate-[-14deg] origin-right opacity-90"></div>
+      <div class="geo absolute bottom-8 right-0 w-56 h-[9px] opacity-70"></div>
+      <div class="absolute bottom-0 right-0 w-72 h-5" style="background-color: var(--orange); opacity: 0.85;"></div>
+    </div>
+  </section>
+
+
+  <!-- ═══════════════════════════════════════════════
+       PROPÓSITO
+  ═══════════════════════════════════════════════ -->
+  <section id="proposito" class="bg-texture py-20 px-6">
+    <div class="max-w-5xl mx-auto">
+
+      <!-- ✏️ EDITAR: Título propósito -->
+      <h2 class="font-condensed font-black text-center text-4xl sm:text-5xl uppercase tracking-[0.18em] mb-12" style="color: var(--red);">
+        PROFUNDIZANDO JUNTOS
+      </h2>
+
+      <div class="grid grid-cols-1 sm:grid-cols-3 gap-7">
+
+        <!-- ✏️ EDITAR: Tarjeta 1 -->
+        <div class="card-texture card-hover rounded-2xl shadow-md border border-gray-100 p-8 flex flex-col items-center text-center">
+          <div class="w-16 h-16 rounded-xl flex items-center justify-center mb-5 shrink-0" style="background-color: var(--red);">
+            <svg xmlns="http://www.w3.org/2000/svg" class="w-9 h-9 text-white" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M12 6.042A8.967 8.967 0 0 0 6 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 0 1 6 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 0 1 6-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0 0 18 18a8.967 8.967 0 0 0-6 2.292m0-14.25v14.25"/>
+            </svg>
+          </div>
+          <h3 class="font-condensed font-black text-xl sm:text-2xl uppercase tracking-wide text-gray-900 mb-2">CRECIMIENTO<br/>ESPIRITUAL</h3>
+          <p class="text-gray-500 text-sm leading-relaxed">Profundizando en la Palabra para crecer en fe y carácter, en un ambiente que inspira.</p>
+        </div>
+
+        <!-- ✏️ EDITAR: Tarjeta 2 -->
+        <div class="card-texture card-hover rounded-2xl shadow-md border border-gray-100 p-8 flex flex-col items-center text-center">
+          <div class="w-16 h-16 rounded-xl flex items-center justify-center mb-5 shrink-0" style="background-color: var(--red);">
+            <svg xmlns="http://www.w3.org/2000/svg" class="w-9 h-9 text-white" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M3 3v1.5M3 21v-6m0 0 2.77-.693a9 9 0 0 1 6.208.682l.108.054a9 9 0 0 0 6.086.71l3.114-.732a48.524 48.524 0 0 1-.005-10.499l-3.11.732a9 9 0 0 1-6.085-.711l-.108-.054a9 9 0 0 0-6.208-.682L3 4.5M3 15V4.5"/>
+            </svg>
+          </div>
+          <h3 class="font-condensed font-black text-xl sm:text-2xl uppercase tracking-wide text-gray-900 mb-2">IDENTIDAD<br/>Y MISIÓN</h3>
+          <p class="text-gray-500 text-sm leading-relaxed">Descubriendo quiénes somos en Cristo y para qué fuimos llamados en este tiempo.</p>
+        </div>
+
+        <!-- ✏️ EDITAR: Tarjeta 3 -->
+        <div class="card-texture card-hover rounded-2xl shadow-md border border-gray-100 p-8 flex flex-col items-center text-center">
+          <div class="w-16 h-16 rounded-xl flex items-center justify-center mb-5 shrink-0" style="background-color: var(--red);">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" class="w-9 h-9" fill="none" stroke="white" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M8.5 7 C7 7, 5.5 9, 5.5 13 C5.5 17, 7.5 20, 12 20 C16.5 20, 18.5 17, 18.5 13 C18.5 9, 17 7, 15.5 7 Z"/>
+              <line x1="7.5" y1="7" x2="16.5" y2="7"/>
+              <line x1="12" y1="2" x2="12" y2="13"/>
+              <ellipse cx="12" cy="14.5" rx="1.5" ry="1" fill="white" stroke="none"/>
+            </svg>
+          </div>
+          <h3 class="font-condensed font-black text-xl sm:text-2xl uppercase tracking-wide text-gray-900 mb-2">COMUNIÓN<br/>Y RELACIONES</h3>
+          <p class="text-gray-500 text-sm leading-relaxed">Construyendo vínculos auténticos en el fogón, la arena y la comunidad que Dios nos dio.</p>
+        </div>
+
+      </div>
+    </div>
+  </section>
+
+
+  <!-- ═══════════════════════════════════════════════
+       SECCIÓN HORIZONTAL: FECHA · LUGAR · PRECIOS
+  ═══════════════════════════════════════════════ -->
+  <section id="info-precios" class="flex flex-col lg:flex-row">
+
+    <!-- ── COLUMNA IZQUIERDA: Fecha y Lugar (fondo oscuro) ── -->
+    <div class="lg:w-2/5 bg-gray-950 py-14 px-10 lg:px-14 flex flex-col justify-center gap-9">
+
+      <!-- ✏️ EDITAR: Título columna izquierda -->
+      <p class="font-condensed font-bold text-white/40 text-xs tracking-[0.35em] uppercase">¿Dónde y cuándo?</p>
+
+      <!-- Bloque: Fecha -->
+      <div class="flex items-start gap-5">
+        <div class="w-12 h-12 rounded-xl flex items-center justify-center shrink-0" style="background-color: var(--orange);">
+          <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6 text-white" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 0 1 2.25-2.25h13.5A2.25 2.25 0 0 1 21 7.5v11.25m-18 0A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75m-18 0v-7.5A2.25 2.25 0 0 1 5.25 9h13.5A2.25 2.25 0 0 1 21 11.25v7.5"/>
+          </svg>
+        </div>
+        <div>
+          <p class="text-white/50 text-xs font-condensed font-bold tracking-widest uppercase mb-0.5">Fechas</p>
+          <!-- ✏️ EDITAR: Fechas -->
+          <p class="font-condensed font-black text-white text-2xl sm:text-3xl uppercase leading-tight tracking-wide">18 AL 25 DE<br/>ENERO 2027</p>
+        </div>
+      </div>
+
+      <!-- Separador -->
+      <div class="border-t border-white/10"></div>
+
+      <!-- Bloque: Lugar -->
+      <div class="flex items-start gap-5">
+        <div class="w-12 h-12 rounded-xl flex items-center justify-center shrink-0" style="background-color: var(--orange);">
+          <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6 text-white" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M15 10.5a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z"/>
+            <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1 1 15 0Z"/>
+          </svg>
+        </div>
+        <div>
+          <p class="text-white/50 text-xs font-condensed font-bold tracking-widest uppercase mb-0.5">Lugar</p>
+          <!-- ✏️ EDITAR: Lugar -->
+          <p class="font-condensed font-black text-white text-2xl sm:text-3xl uppercase leading-tight tracking-wide">LA LUCILA<br/>DEL MAR</p>
+          <p class="text-white/40 text-sm font-light mt-1">Costa Atlántica · Argentina</p>
+        </div>
+      </div>
+
+      <!-- Separador -->
+      <div class="border-t border-white/10"></div>
+
+      <!-- Bloque: Duración -->
+      <div class="flex items-start gap-5">
+        <div class="w-12 h-12 rounded-xl flex items-center justify-center shrink-0" style="background-color: var(--orange);">
+          <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6 text-white" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"/>
+          </svg>
+        </div>
+        <div>
+          <p class="text-white/50 text-xs font-condensed font-bold tracking-widest uppercase mb-0.5">Duración</p>
+          <!-- ✏️ EDITAR: Duración -->
+          <p class="font-condensed font-black text-white text-2xl sm:text-3xl uppercase leading-tight tracking-wide">7 DÍAS<br/>6 NOCHES</p>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- ── COLUMNA DERECHA: Precios (fondo naranja) ── -->
+    <div class="lg:w-3/5 py-14 px-10 lg:px-14 flex flex-col justify-center" style="background-color: var(--orange);">
+
+      <!-- ✏️ EDITAR: Título sección precios -->
+      <h2 class="font-condensed font-black text-white text-3xl sm:text-4xl xl:text-5xl uppercase leading-tight tracking-wide mb-8">
+        CONGELA TU PRECIO<br/>Y ASEGURA<br/>TU LUGAR
+      </h2>
+
+      <!-- Tarjeta de precios -->
+      <div class="card-texture rounded-2xl shadow-2xl overflow-hidden max-w-md border border-white/10">
+
+        <!-- Header rojo -->
+        <div style="background-color: var(--red);" class="px-6 py-3 text-center">
+          <!-- ✏️ EDITAR: Etiqueta de la tarjeta de precios -->
+          <p class="font-condensed font-black text-white text-2xl uppercase tracking-[0.25em]">VALOR</p>
+        </div>
+
+        <div class="divide-y divide-gray-200/70">
+          <!-- ✏️ EDITAR: Precio 1 -->
+          <div class="flex items-center justify-between px-6 py-4">
+            <span class="font-condensed font-bold text-gray-500 text-lg tracking-wide uppercase">Hasta Sept</span>
+            <span class="font-condensed font-black text-gray-900 text-2xl">$230.000</span>
+          </div>
+          <!-- ✏️ EDITAR: Precio 2 -->
+          <div class="flex items-center justify-between px-6 py-4">
+            <span class="font-condensed font-bold text-gray-500 text-lg tracking-wide uppercase">Hasta Nov</span>
+            <span class="font-condensed font-black text-gray-900 text-2xl">$270.000</span>
+          </div>
+          <!-- ✏️ EDITAR: Precio 3 -->
+          <div class="flex items-center justify-between px-6 py-4">
+            <span class="font-condensed font-bold text-gray-500 text-lg tracking-wide uppercase">Hasta Ene</span>
+            <span class="font-condensed font-black text-gray-900 text-2xl">$320.000</span>
+          </div>
+        </div>
+
+        <!-- Footer rojo -->
+        <div style="background-color: var(--red);" class="px-6 py-3 text-center">
+          <!-- ✏️ EDITAR: Mensaje de urgencia -->
+          <p class="font-condensed font-black text-white text-lg uppercase tracking-[0.2em]">⚡ LUGARES LIMITADOS</p>
+        </div>
+
+      </div>
+
+      <!-- ✏️ EDITAR: Nota informativa -->
+      <p class="mt-5 text-white/70 text-sm font-light leading-relaxed max-w-xs">
+        Para reservar tu lugar solo necesitás dejar una seña.<br/>
+        Consultá al líder para más información.
+      </p>
+
+      <!-- Botón directo al panel -->
+      <a href="#inscripcion"
+         class="mt-7 self-start inline-flex items-center gap-2 bg-white/20 hover:bg-white/30 border border-white/30 text-white font-condensed font-black  uppercase tracking-widest px-7 py-3.5 rounded-xl transition-all duration-200">
+        Me anoto ahora
+        <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5"/>
+        </svg>
+      </a>
+
+    </div>
+  </section>
+
+
+  <!-- ═══════════════════════════════════════════════
+       YA SE ANOTARON
+  ═══════════════════════════════════════════════ -->
+  <section id="anotados" class="bg-texture py-20 px-6">
+    <div class="max-w-6xl mx-auto">
+
+      <h2 class="font-condensed font-black text-center text-4xl sm:text-5xl uppercase tracking-[0.18em] mb-3" style="color: var(--red);">
+        YA SE ANOTARON
+      </h2>
+      <p id="contador-anotados" class="text-center text-gray-500 font-light mb-12"></p>
+
+      <div id="grilla-anotados" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-5"></div>
+
+    </div>
+  </section>
+
+
+  <!-- ═══════════════════════════════════════════════
+       PANEL DE INSCRIPCIÓN EN VIVO
+  ═══════════════════════════════════════════════ -->
+  <section id="inscripcion" class="py-16 px-6 lg:px-12" style="background-color: var(--red);    min-height: 800px;">
+    <div class="max-w-5xl mx-auto">
+
+      <!-- Indicador "en vivo" -->
+      <div class="flex items-center gap-2.5 mb-8">
+        <span class="w-2.5 h-2.5 rounded-full bg-white animate-pulse shrink-0"></span>
+        <span class="font-condensed font-bold text-white/60 text-sm tracking-[0.28em] uppercase">Panel en vivo · Evento</span>
+      </div>
+
+      <!-- Grid principal del panel: counter+form | lista+export -->
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-10 lg:gap-14">
+
+        <!-- ── COLUMNA IZQUIERDA: Contador + Formulario ── -->
+        <div>
+
+          <!-- Contador -->
+          <div class="mb-7">
+            <!-- ✏️ EDITAR: Etiqueta del contador -->
+            <p class="font-condensed font-bold text-white/70 text-xl uppercase tracking-wide mb-1">TOTAL INSCRITOS</p>
+            <span id="contador"
+                  class="font-condensed font-black text-white block"
+                  style="font-size: clamp(5rem, 10vw, 7rem); line-height: 1; text-shadow: 0 4px 16px rgba(0,0,0,0.3);">
+              0
+            </span>
+            <p class="font-condensed text-white/40 text-sm uppercase tracking-widest mt-1">reservaron su lugar</p>
+          </div>
+
+          <!-- Formulario -->
+          <form id="form-panel" onsubmit="agregarInscrito(event)">
+            <div class="flex gap-2">
+              <!-- ✏️ EDITAR: Placeholder del campo -->
+              <input
+                id="input-nombre"
+                type="text"
+                placeholder="NOMBRE Y APELLIDO"
+                maxlength="60"
+                required
+                autocomplete="off"
+                spellcheck="false"
+                class="flex-1 min-w-0 bg-white text-gray-900 font-condensed font-semibold  uppercase tracking-wide placeholder-gray-400 px-4 py-3.5 rounded-xl focus:outline-none focus:ring-2 focus:ring-white/40 transition-all"
+              />
+              <button
+                type="submit"
+                class="btn-orange flex items-center gap-1.5 text-white font-condensed font-black  uppercase tracking-wide px-5 py-3.5 rounded-xl shadow-lg shrink-0">
+                <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="m4.5 12.75 6 6 9-13.5"/>
+                </svg>
+                OK
+              </button>
+            </div>
+          </form>
+
+          <!-- Botones de exportación -->
+          <div class="mt-8">
+            <p class="font-condensed font-bold text-white/50 text-xs tracking-[0.3em] uppercase mb-3">Exportar lista</p>
+            <div class="flex flex-wrap gap-2.5">
+
+              <!-- Exportar CSV -->
+              <button class="btn-export" onclick="exportarCSV()" title="Descargar lista como CSV">
+                <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5M16.5 12 12 16.5m0 0L7.5 12m4.5 4.5V3"/>
+                </svg>
+                CSV
+              </button>
+
+              <!-- Exportar Excel -->
+              <button class="btn-export" onclick="exportarExcel()" title="Descargar lista como Excel .xlsx">
+                <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M9 17.25v1.007a3 3 0 0 1-.879 2.122L7.5 21h9l-.621-.621A3 3 0 0 1 15 18.257V17.25m6-12V15a2.25 2.25 0 0 1-2.25 2.25H5.25A2.25 2.25 0 0 1 3 15V5.25A2.25 2.25 0 0 1 5.25 3h5.25m5.25 0H18a2.25 2.25 0 0 1 2.25 2.25V12a2.25 2.25 0 0 1-2.25 2.25h-2.25"/>
+                </svg>
+                Excel .xlsx
+              </button>
+
+              <!-- Copiar para Google Sheets -->
+              <button class="btn-export sheets" onclick="copiarParaSheets()" title="Copiar datos como TSV para pegar en Google Sheets">
+                <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M9 12h3.75M9 15h3.75M9 18h3.75m3 .75H18a2.25 2.25 0 0 0 2.25-2.25V6.108c0-1.135-.845-2.098-1.976-2.192a48.424 48.424 0 0 0-1.123-.08m-5.801 0c-.065.21-.1.433-.1.664 0 .414.336.75.75.75h4.5a.75.75 0 0 0 .75-.75 2.25 2.25 0 0 0-.1-.664m-5.8 0A2.251 2.251 0 0 1 13.5 2.25H15c1.012 0 1.867.668 2.15 1.586m-5.8 0c-.376.023-.75.05-1.124.08C9.095 4.01 8.25 4.973 8.25 6.108V8.25m0 0H4.875c-.621 0-1.125.504-1.125 1.125v11.25c0 .621.504 1.125 1.125 1.125h9.75c.621 0 1.125-.504 1.125-1.125V9.375c0-.621-.504-1.125-1.125-1.125H8.25ZM6.75 12h.008v.008H6.75V12Zm0 3h.008v.008H6.75V15Zm0 3h.008v.008H6.75V18Z"/>
+                </svg>
+                Google Sheets
+              </button>
+
+            </div>
+          </div>
+
+        </div>
+
+        <!-- ── COLUMNA DERECHA: Lista de inscritos ── -->
+        <div class="flex flex-col">
+
+          <p class="font-condensed font-bold text-white/70 text-xl uppercase tracking-wide mb-4">INSCRITOS</p>
+
+          <!-- Lista con scroll -->
+          <div id="lista-inscritos"
+               class="space-y-2 overflow-y-auto flex-1"
+               style="max-height: 340px; min-height: 700px;">
+          </div>
+
+          <!-- Mensaje vacío -->
+          <p id="msg-vacio" class="text-white/45 text-sm font-light italic py-4">
+            Aún no hay inscritos. ¡Sé el primero en dar el paso!
+          </p>
+
+          <!-- ✏️ EDITAR: Mensaje de cierre de la lista -->
+          <p id="msg-cierre" class="hidden font-condensed font-black text-white text-xl uppercase tracking-[0.18em] border-t border-white/20 pt-5 mt-3">
+            UNIDOS EN PROPÓSITO
+          </p>
+
+          <!-- Botón reset (discreto) -->
+          <button
+            onclick="limpiarLista()"
+            class="mt-6 text-white/25 hover:text-white/55 text-xs underline underline-offset-4 transition-colors self-start">
+            Reiniciar lista (solo líder)
+          </button>
+
+        </div>
+      </div>
+    </div>
+  </section>
+
+
+  <!-- ═══════════════════════════════════════════════
+       FOOTER
+  ═══════════════════════════════════════════════ -->
+  <footer class="bg-gray-950 border-t border-gray-800 py-6 px-4 text-center">
+    <!-- ✏️ EDITAR: Texto del footer -->
+    <p class="font-condensed text-gray-500 text-xs tracking-[0.3em] uppercase">
+      CAMPA JH &nbsp;·&nbsp;
+      <span style="color: var(--orange);">ENERO 2027</span>
+      &nbsp;·&nbsp; LA LUCILA DEL MAR
+    </p>
+  </footer>
+
+  <!-- Toast de feedback -->
+  <div id="toast"></div>
+
+
+  <!-- ═══════════════════════════════════════════════
+       JAVASCRIPT
+  ═══════════════════════════════════════════════ -->
+  <script>
+    // ── Fotos de anotados ───────────────────────────────────────
+    // Para sumar a alguien:
+    // 1. Copiá la foto a la carpeta anotados/.
+    // 2. Agregá una línea: { file: 'Nombre Apellido.png', name: 'Nombre Apellido' }
+    // El nombre visible es el campo name. El archivo puede ser .png, .jpg, .jpeg o .webp.
+    const ANOTADOS = [
+      { file: 'Agus.png', name: 'Agus' },
+      { file: 'Alan Saul.png', name: 'Alan Saul' },
+      { file: 'Andy Aguirre.png', name: 'Andy Aguirre' },
+      { file: 'cata.jpg', name: 'Cata' },
+      { file: 'Dani Bullon.png', name: 'Dani Bullon' },
+      { file: 'Eliseo.png', name: 'Eliseo' },
+      { file: 'Facu.png', name: 'Facu' },
+      { file: 'Hugui.png', name: 'Hugui' },
+      { file: 'Juanchi.png', name: 'Juanchi' },
+      { file: 'kei fer.webp', name: 'Kei Fer' },
+      { file: 'Kevin.png', name: 'Kevin' },
+      { file: 'Lea Bravo.png', name: 'Lea Bravo' },
+      { file: 'Marilu.png', name: 'Marilu' },
+      { file: 'Nahiara.png', name: 'Nahiara' },
+      { file: 'Nahu.png', name: 'Nahu' },
+      { file: 'Romi A.png', name: 'Romi A' },
+      { file: 'Sahi.png', name: 'Sahi' },
+      { file: 'Sergio.jpeg', name: 'Sergio' },
+      { file: 'Taiel Taiano.png', name: 'Taiel Taiano' },
+    ];
+
+    // ── Clave LocalStorage ──────────────────────────────────────
+    // ✏️ EDITAR: cambia si necesitás namespaces distintos
+    const STORAGE_KEY = 'campa_jh_enero2027';
+
+    let inscritos = [];
+
+    function inscritosBase() {
+      return ANOTADOS.map((p, i) => ({
+        id: `base-${i}`,
+        nombre: p.name.toUpperCase(),
+      }));
+    }
+
+    function fechaInscripcion(id) {
+      const n = Number(id);
+      if (!Number.isFinite(n) || n < 1e11) return '—';
+      return new Date(n).toLocaleString('es-AR', {
+        day: '2-digit', month: '2-digit', year: 'numeric',
+        hour: '2-digit', minute: '2-digit',
+      });
+    }
+
+    function pintarLista() {
+      document.getElementById('lista-inscritos').innerHTML = '';
+      inscritos.forEach((p, i) => renderItem(p, i, false));
+      actualizarUI();
+    }
+
+    // ── Inicializar desde LocalStorage ──────────────────────────
+    document.addEventListener('DOMContentLoaded', () => {
+      renderAnotados();
+
+      let guardados = [];
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if (raw) {
+        try { guardados = JSON.parse(raw); }
+        catch (_) { guardados = []; }
+      }
+      if (!Array.isArray(guardados)) guardados = [];
+
+      const ya = new Set(guardados.map((p) => String(p.nombre || '').toUpperCase()));
+      const faltantes = inscritosBase().filter((p) => !ya.has(p.nombre));
+      inscritos = [...faltantes, ...guardados];
+      if (faltantes.length) guardarStorage();
+      pintarLista();
+    });
+
+    // ── Galería de anotados ──────────────────────────────────────
+    function renderAnotados() {
+      const grilla = document.getElementById('grilla-anotados');
+      const contador = document.getElementById('contador-anotados');
+      const total = ANOTADOS.length;
+
+      contador.textContent = total === 1
+        ? '1 persona ya reservó su lugar'
+        : `${total} personas ya reservaron su lugar`;
+
+      ANOTADOS.forEach((persona) => {
+        const card = document.createElement('article');
+        card.className = 'card-hover card-texture rounded-2xl shadow-md border border-gray-100 overflow-hidden';
+
+        const foto = document.createElement('div');
+        foto.className = 'aspect-square overflow-hidden bg-gray-100';
+
+        const img = document.createElement('img');
+        img.src = 'anotados/' + encodeURIComponent(persona.file);
+        img.alt = persona.name;
+        img.loading = 'lazy';
+        img.className = 'w-full h-full object-cover';
+
+        const nombre = document.createElement('p');
+        nombre.className = 'font-condensed font-black text-center uppercase tracking-wide text-gray-900 text-sm sm:text-base py-2.5 px-2 truncate';
+        nombre.textContent = persona.name;
+
+        foto.appendChild(img);
+        card.appendChild(foto);
+        card.appendChild(nombre);
+        grilla.appendChild(card);
+      });
+
+      const sumate = document.createElement('a');
+      sumate.href = '#inscripcion';
+      sumate.className = 'card-hover rounded-2xl border-2 border-dashed overflow-hidden flex flex-col bg-white';
+      sumate.style.borderColor = 'var(--red)';
+
+      const hueco = document.createElement('div');
+      hueco.className = 'aspect-square flex items-center justify-center';
+      hueco.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" class="w-12 h-12" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" style="color: var(--red)"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15"/></svg>';
+
+      const etiqueta = document.createElement('p');
+      etiqueta.className = 'font-condensed font-black text-center uppercase tracking-[0.18em] text-sm sm:text-base py-2.5 px-2';
+      etiqueta.style.color = 'var(--red)';
+      etiqueta.textContent = 'Sumate';
+
+      sumate.appendChild(hueco);
+      sumate.appendChild(etiqueta);
+      grilla.appendChild(sumate);
+    }
+
+    // ── Agregar inscrito ─────────────────────────────────────────
+    function agregarInscrito(e) {
+      e.preventDefault();
+      const valor = document.getElementById('input-nombre').value.trim();
+      if (!valor) return;
+
+      const persona = { id: Date.now(), nombre: valor.toUpperCase() };
+      inscritos.push(persona);
+      guardarStorage();
+      renderItem(persona, inscritos.length - 1, true);
+      actualizarUI();
+
+      document.getElementById('input-nombre').value = '';
+      document.getElementById('input-nombre').focus();
+    }
+
+    // ── Renderizar un item en la lista ───────────────────────────
+    function renderItem(persona, index, animar) {
+      const lista = document.getElementById('lista-inscritos');
+
+      const item = document.createElement('div');
+      item.id = `item-${persona.id}`;
+      item.className = [
+        'flex items-center gap-3',
+        'bg-white/10 hover:bg-white/15',
+        'rounded-xl px-4 py-2.5',
+        'transition-colors duration-150',
+        animar ? 'fade-up' : '',
+      ].join(' ');
+
+      const num = document.createElement('span');
+      num.className = 'font-condensed font-bold text-white/45 text-sm w-6 text-right shrink-0';
+      num.textContent = index + 1;
+
+      const nombre = document.createElement('span');
+      nombre.className = 'font-condensed font-bold text-white  tracking-wide flex-1 truncate';
+      nombre.textContent = persona.nombre;
+
+      const check = document.createElement('span');
+      check.className = 'shrink-0 text-white/80';
+      check.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="m4.5 12.75 6 6 9-13.5"/></svg>`;
+
+      item.appendChild(num);
+      item.appendChild(nombre);
+      item.appendChild(check);
+      lista.appendChild(item);
+
+      if (animar) lista.scrollTop = lista.scrollHeight;
+    }
+
+    // ── Actualizar contador y mensajes ───────────────────────────
+    function actualizarUI() {
+      const el    = document.getElementById('contador');
+      const total = inscritos.length;
+
+      el.textContent = total;
+      el.classList.remove('bump');
+      void el.offsetWidth;
+      el.classList.add('bump');
+
+      const hayData = total > 0;
+      document.getElementById('msg-vacio').classList.toggle('hidden', hayData);
+      document.getElementById('msg-cierre').classList.toggle('hidden', !hayData);
+    }
+
+    // ── Persistir en LocalStorage ────────────────────────────────
+    function guardarStorage() {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(inscritos));
+    }
+
+    // ── Limpiar lista ────────────────────────────────────────────
+    function limpiarLista() {
+      if (!confirm('¿Reiniciar la lista? Se borran los nombres agregados a mano y quedan los que ya estaban anotados.')) return;
+      inscritos = inscritosBase();
+      guardarStorage();
+      pintarLista();
+    }
+
+    // ── Toast de feedback ────────────────────────────────────────
+    function mostrarToast(msg) {
+      const toast = document.getElementById('toast');
+      toast.textContent = msg;
+      toast.classList.add('show');
+      setTimeout(() => toast.classList.remove('show'), 3000);
+    }
+
+    // ── Validar que haya datos antes de exportar ─────────────────
+    function validarExport() {
+      if (inscritos.length === 0) {
+        mostrarToast('⚠️ No hay inscritos para exportar.');
+        return false;
+      }
+      return true;
+    }
+
+    // ── Construir filas de datos ─────────────────────────────────
+    function filasDatos() {
+      return inscritos.map((p, i) => ({
+        'N°':                   i + 1,
+        'Nombre y Apellido':    p.nombre,
+        'Fecha de inscripción': fechaInscripcion(p.id),
+      }));
+    }
+
+    // ════════════════════════════════════════════════════════════
+    // EXPORTAR CSV
+    // ════════════════════════════════════════════════════════════
+    function exportarCSV() {
+      if (!validarExport()) return;
+
+      const header = 'N°,Nombre y Apellido,Fecha de inscripción\n';
+      const rows   = inscritos.map((p, i) => {
+        const fecha = fechaInscripcion(p.id);
+        // Escapar comillas dobles dentro del nombre
+        const nombre = p.nombre.replace(/"/g, '""');
+        return `${i + 1},"${nombre}","${fecha}"`;
+      }).join('\n');
+
+      // BOM UTF-8 para que Excel lo lea correctamente
+      const csv  = '\uFEFF' + header + rows;
+      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+      descargarBlob(blob, 'inscritos_campa_jh_2027.csv');
+      mostrarToast('✅ CSV descargado correctamente.');
+    }
+
+    // ════════════════════════════════════════════════════════════
+    // EXPORTAR EXCEL (.xlsx) — requiere SheetJS
+    // ════════════════════════════════════════════════════════════
+    function exportarExcel() {
+      if (!validarExport()) return;
+
+      if (typeof XLSX === 'undefined') {
+        mostrarToast('⚠️ SheetJS no cargó. Verificá la conexión a internet.');
+        return;
+      }
+
+      const datos = [
+        ['N°', 'Nombre y Apellido', 'Fecha de inscripción'],
+        ...inscritos.map((p, i) => [
+          i + 1,
+          p.nombre,
+          fechaInscripcion(p.id),
+        ]),
+      ];
+
+      const hoja  = XLSX.utils.aoa_to_sheet(datos);
+
+      // Ancho de columnas
+      hoja['!cols'] = [{ wch: 5 }, { wch: 35 }, { wch: 22 }];
+
+      // Estilo del encabezado (negrita) — solo disponible con xlsx-style, acá lo dejamos limpio
+      const libro = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(libro, hoja, 'Inscritos CAMPA JH');
+      XLSX.writeFile(libro, 'inscritos_campa_jh_2027.xlsx');
+
+      mostrarToast('✅ Excel descargado correctamente.');
+    }
+
+    // ════════════════════════════════════════════════════════════
+    // COPIAR PARA GOOGLE SHEETS (TSV al portapapeles)
+    // ════════════════════════════════════════════════════════════
+    async function copiarParaSheets() {
+      if (!validarExport()) return;
+
+      const filas = inscritos.map((p, i) => {
+        return `${i + 1}\t${p.nombre}\t${fechaInscripcion(p.id)}`;
+      });
+
+      const tsv = 'N°\tNombre y Apellido\tFecha de inscripción\n' + filas.join('\n');
+
+      try {
+        // API moderna del portapapeles
+        await navigator.clipboard.writeText(tsv);
+      } catch (_) {
+        // Fallback para navegadores sin permisos de clipboard
+        const ta = document.createElement('textarea');
+        ta.value = tsv;
+        ta.style.cssText = 'position:fixed;opacity:0;top:0;left:0;';
+        document.body.appendChild(ta);
+        ta.focus();
+        ta.select();
+        document.execCommand('copy');
+        document.body.removeChild(ta);
+      }
+
+      mostrarToast('📋 Copiado. Abrí Google Sheets → pegá en celda A1 (Ctrl+V)');
+    }
+
+    // ── Helper: descargar un Blob como archivo ───────────────────
+    function descargarBlob(blob, nombreArchivo) {
+      const url = URL.createObjectURL(blob);
+      const a   = document.createElement('a');
+      a.href     = url;
+      a.download = nombreArchivo;
+      a.style.display = 'none';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      setTimeout(() => URL.revokeObjectURL(url), 10000);
+    }
+  </script>
+
+</body>
+</html>
