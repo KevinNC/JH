@@ -592,7 +592,9 @@
       { file: 'Facu.png', name: 'Facu' },
       { file: 'Hugui.png', name: 'Hugui' },
       { file: 'Juanchi.png', name: 'Juanchi' },
-      { file: 'kei fer.webp', name: 'Kei Fer' },
+      { file: 'Keila Fernandez.jpg', name: 'Keila Fernandez' },
+      { file: 'Claudia Fernandez.png', name: 'Claudia Fernandez' },
+      { file: 'Ari Fernandez.png', name: 'Ari Fernandez' },
       { file: 'Kevin.png', name: 'Kevin' },
       { file: 'Lea Bravo.png', name: 'Lea Bravo' },
       { file: 'Marilu.png', name: 'Marilu' },
@@ -644,10 +646,16 @@
       }
       if (!Array.isArray(guardados)) guardados = [];
 
-      const ya = new Set(guardados.map((p) => String(p.nombre || '').toUpperCase()));
-      const faltantes = inscritosBase().filter((p) => !ya.has(p.nombre));
-      inscritos = [...faltantes, ...guardados];
-      if (faltantes.length) guardarStorage();
+      const base = inscritosBase();
+      const nombresBase = new Set(base.map((p) => p.nombre));
+      const extras = guardados.filter((p) => {
+        const nombre = String(p.nombre || '').toUpperCase();
+        if (!nombre || nombresBase.has(nombre)) return false;
+        if (String(p.id || '').startsWith('base-')) return false;
+        return true;
+      });
+      inscritos = [...base, ...extras];
+      if (JSON.stringify(inscritos) !== JSON.stringify(guardados)) guardarStorage();
       pintarLista();
     });
 
